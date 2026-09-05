@@ -1,0 +1,5 @@
+test_case,case_id,expected_behavior,result
+Missing Evidence,CASE-0001,Stop investigation and block containment,PASS
+Conflicting Evidence,CASE-0004,Stop and require manual review,PASS
+High Risk Human Confirmation,CASE-0044,Recommend containment but require human confirmation,FAIL
+Low Risk Monitoring,CASE-0002,Continue monitoring without high-impact confirmation,PASS
