@@ -1,0 +1,8 @@
+metric,value
+Test Cases,100
+Average Response Time (ms),0.6053
+Minimum Response Time (ms),0.4487
+Maximum Response Time (ms),1.1792
+95th Percentile (ms),0.867
+Target Response Time (ms),1000
+Status,PASS
