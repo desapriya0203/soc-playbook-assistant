@@ -1,0 +1,13 @@
+procedure_id,alert_type,investigation_step,evidence_required,expected_action,risk_level,human_confirmation,source
+PROC001,Brute Force,"Review failed login attempts","Authentication logs","Check repeated failed logins and identify affected account",MEDIUM,No,Approved SOC Procedure
+PROC002,Brute Force,"Check successful login after failed attempts","Authentication logs","Verify whether successful login is legitimate",HIGH,Yes,Approved SOC Procedure
+PROC003,New IP,"Investigate unfamiliar source IP","IP address and authentication logs","Verify IP reputation and user activity",MEDIUM,No,Approved SOC Procedure
+PROC004,Location Change,"Review unusual login location","Login location and authentication logs","Verify whether location change is legitimate",MEDIUM,No,Approved SOC Procedure
+PROC005,Endpoint Anomaly,"Review endpoint activity","Endpoint security logs","Check suspicious process or endpoint behaviour",HIGH,Yes,Approved SOC Procedure
+PROC006,Email Anomaly,"Review suspicious email activity","Email security logs","Inspect sender, links and attachments",MEDIUM,No,Approved SOC Procedure
+PROC007,Cloud Anomaly,"Review cloud activity","Cloud audit logs","Check unusual cloud access or configuration changes",HIGH,Yes,Approved SOC Procedure
+PROC008,Any,"Collect supporting evidence","Relevant security logs","Record sufficient evidence before containment",HIGH,Yes,Approved SOC Procedure
+PROC009,Any,"Handle missing evidence","Required investigation evidence","Stop investigation and request missing evidence",ANY,Yes,Approved SOC Procedure
+PROC010,Any,"Handle conflicting evidence","Conflicting security evidence","Stop automated decision and escalate for manual review",ANY,Yes,Approved SOC Procedure
+PROC011,Suspicious Login,"Review suspicious login activity","Authentication logs and login history","Verify whether the login is legitimate and investigate unusual activity",MEDIUM,No,Approved SOC Procedure
+PROC012,Suspicious Login,"Check unfamiliar source IP","IP address and authentication logs","Verify source IP and investigate unexpected login origin",MEDIUM,No,Approved SOC Procedure
