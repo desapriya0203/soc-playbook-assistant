@@ -1,16 +1,29 @@
 import pandas as pd
 
+try:
+    from src.procedure_loader import get_procedures_for_alert
+except ImportError:
+    from procedure_loader import get_procedures_for_alert
+
+try:
+    from src.past_investigation_loader import get_similar_investigations
+except ImportError:
+    from past_investigation_loader import get_similar_investigations
+
 
 # ============================================================
 # SOC INVESTIGATION PLAYBOOK RULES
 # ============================================================
 
+
 def generate_playbook(case):
+
     """
     Generate an investigation playbook for a single SOC case.
 
     The assistant does NOT automatically perform containment.
     It only recommends actions and explains the evidence/rule.
+
     High-impact actions require human confirmation.
     """
 
@@ -37,23 +50,75 @@ def generate_playbook(case):
     risk_level = case["risk_level"]
 
     # --------------------------------------------------------
-    # STEP 1 - Validate Alert
+    # Approved procedures
     # --------------------------------------------------------
 
+    approved_procedures = get_procedures_for_alert(
+        str(case["alert_type"])
+    )
+
+    # --------------------------------------------------------
+    # Similar past investigations
+    # --------------------------------------------------------
+
+    similar_investigations = get_similar_investigations(
+        str(case["alert_type"])
+    )
+
+    # --------------------------------------------------------
+    # Extract lessons learned
+    # --------------------------------------------------------
+
+    past_investigation_insights = []
+
+    for investigation in similar_investigations:
+
+        lesson = investigation.get(
+            "lesson_learned",
+            ""
+        ).strip()
+
+        if lesson:
+
+            past_investigation_insights.append({
+
+                "case_id":
+                    investigation.get(
+                        "case_id",
+                        ""
+                    ),
+
+                "lesson_learned":
+                    lesson
+            })
+
+    # ========================================================
+    # STEP 1 - VALIDATE ALERT
+    # ========================================================
+
     steps.append({
+
         "step": 1,
-        "action": "Validate Alert",
-        "reason": "Every investigation must begin by validating the original alert.",
+
+        "action":
+            "Validate Alert",
+
+        "reason":
+            "Every investigation must begin by validating the original alert.",
+
         "evidence_required": [
+
             "Alert source",
+
             "Alert timestamp",
+
             "Affected user or endpoint"
         ]
     })
 
-    # --------------------------------------------------------
-    # STEP 2 - Authentication Investigation
-    # --------------------------------------------------------
+    # ========================================================
+    # STEP 2 - AUTHENTICATION INVESTIGATION
+    # ========================================================
 
     if failed_logins >= 5:
 
@@ -62,41 +127,66 @@ def generate_playbook(case):
         )
 
         steps.append({
+
             "step": 2,
-            "action": "Check Authentication History",
-            "reason": (
-                "Repeated failed login attempts may indicate "
-                "credential attack or suspicious authentication activity."
-            ),
+
+            "action":
+                "Check Authentication History",
+
+            "reason":
+                (
+                    "Repeated failed login attempts may indicate "
+                    "credential attack or suspicious authentication activity."
+                ),
+
             "evidence_required": [
+
                 "Authentication logs",
+
                 "Failed login timestamps",
+
                 "Source IP addresses"
             ]
         })
 
         recommendations.append({
-            "action": "Investigate repeated authentication failures",
-            "priority": "HIGH",
-            "reason": f"Rule triggered: failed_login_count >= 5",
-            "evidence": f"failed_login_count = {failed_logins}"
+
+            "action":
+                "Investigate repeated authentication failures",
+
+            "priority":
+                "HIGH",
+
+            "reason":
+                "Rule triggered: failed_login_count >= 5",
+
+            "evidence":
+                f"failed_login_count = {failed_logins}"
         })
 
     else:
 
         steps.append({
+
             "step": 2,
-            "action": "Check Authentication History",
-            "reason": "Authentication history must still be verified.",
+
+            "action":
+                "Check Authentication History",
+
+            "reason":
+                "Authentication history must still be verified.",
+
             "evidence_required": [
+
                 "Recent login events",
+
                 "Source IP"
             ]
         })
 
-    # --------------------------------------------------------
-    # STEP 3 - New IP Investigation
-    # --------------------------------------------------------
+    # ========================================================
+    # STEP 3 - NEW IP INVESTIGATION
+    # ========================================================
 
     if new_ip == 1:
 
@@ -105,29 +195,46 @@ def generate_playbook(case):
         )
 
         steps.append({
+
             "step": 3,
-            "action": "Investigate Source IP",
-            "reason": (
-                "A new IP can indicate account compromise "
-                "or unusual user activity."
-            ),
+
+            "action":
+                "Investigate Source IP",
+
+            "reason":
+                (
+                    "A new IP can indicate account compromise "
+                    "or unusual user activity."
+                ),
+
             "evidence_required": [
+
                 "Source IP",
+
                 "IP reputation",
+
                 "Previous login locations"
             ]
         })
 
         recommendations.append({
-            "action": "Investigate new source IP",
-            "priority": "HIGH",
-            "reason": "Rule triggered: new_ip == 1",
-            "evidence": "new_ip = 1"
+
+            "action":
+                "Investigate new source IP",
+
+            "priority":
+                "HIGH",
+
+            "reason":
+                "Rule triggered: new_ip == 1",
+
+            "evidence":
+                "new_ip = 1"
         })
 
-    # --------------------------------------------------------
-    # STEP 4 - Location Change
-    # --------------------------------------------------------
+    # ========================================================
+    # STEP 4 - LOCATION CHANGE
+    # ========================================================
 
     if location_change == 1:
 
@@ -136,29 +243,46 @@ def generate_playbook(case):
         )
 
         steps.append({
+
             "step": 4,
-            "action": "Investigate Login Location",
-            "reason": (
-                "A sudden location change may indicate "
-                "impossible travel or account misuse."
-            ),
+
+            "action":
+                "Investigate Login Location",
+
+            "reason":
+                (
+                    "A sudden location change may indicate "
+                    "impossible travel or account misuse."
+                ),
+
             "evidence_required": [
+
                 "Current login location",
+
                 "Previous login location",
+
                 "Login timestamps"
             ]
         })
 
         recommendations.append({
-            "action": "Verify unusual login location",
-            "priority": "MEDIUM",
-            "reason": "Rule triggered: location_change == 1",
-            "evidence": "location_change = 1"
+
+            "action":
+                "Verify unusual login location",
+
+            "priority":
+                "MEDIUM",
+
+            "reason":
+                "Rule triggered: location_change == 1",
+
+            "evidence":
+                "location_change = 1"
         })
 
-    # --------------------------------------------------------
-    # STEP 5 - Endpoint Investigation
-    # --------------------------------------------------------
+    # ========================================================
+    # STEP 5 - ENDPOINT INVESTIGATION
+    # ========================================================
 
     if endpoint_anomaly == 1:
 
@@ -167,30 +291,48 @@ def generate_playbook(case):
         )
 
         steps.append({
+
             "step": 5,
-            "action": "Review Endpoint Activity",
-            "reason": (
-                "Endpoint anomalies require process, network "
-                "and system activity review."
-            ),
+
+            "action":
+                "Review Endpoint Activity",
+
+            "reason":
+                (
+                    "Endpoint anomalies require process, network "
+                    "and system activity review."
+                ),
+
             "evidence_required": [
+
                 "Running processes",
+
                 "Network connections",
+
                 "Recent files",
+
                 "Endpoint security alerts"
             ]
         })
 
         recommendations.append({
-            "action": "Review endpoint activity",
-            "priority": "HIGH",
-            "reason": "Rule triggered: endpoint_anomaly == 1",
-            "evidence": "endpoint_anomaly = 1"
+
+            "action":
+                "Review endpoint activity",
+
+            "priority":
+                "HIGH",
+
+            "reason":
+                "Rule triggered: endpoint_anomaly == 1",
+
+            "evidence":
+                "endpoint_anomaly = 1"
         })
 
-    # --------------------------------------------------------
-    # STEP 6 - Email Investigation
-    # --------------------------------------------------------
+    # ========================================================
+    # STEP 6 - EMAIL INVESTIGATION
+    # ========================================================
 
     if email_anomaly == 1:
 
@@ -199,31 +341,50 @@ def generate_playbook(case):
         )
 
         steps.append({
+
             "step": 6,
-            "action": "Review Email Activity",
-            "reason": (
-                "Email anomalies may indicate phishing, "
-                "malicious attachments or account compromise."
-            ),
+
+            "action":
+                "Review Email Activity",
+
+            "reason":
+                (
+                    "Email anomalies may indicate phishing, "
+                    "malicious attachments or account compromise."
+                ),
+
             "evidence_required": [
+
                 "Sender",
+
                 "Recipient",
+
                 "Email subject",
+
                 "Attachments",
+
                 "URLs"
             ]
         })
 
         recommendations.append({
-            "action": "Investigate suspicious email",
-            "priority": "HIGH",
-            "reason": "Rule triggered: email_anomaly == 1",
-            "evidence": "email_anomaly = 1"
+
+            "action":
+                "Investigate suspicious email",
+
+            "priority":
+                "HIGH",
+
+            "reason":
+                "Rule triggered: email_anomaly == 1",
+
+            "evidence":
+                "email_anomaly = 1"
         })
 
-    # --------------------------------------------------------
-    # STEP 7 - Cloud Investigation
-    # --------------------------------------------------------
+    # ========================================================
+    # STEP 7 - CLOUD INVESTIGATION
+    # ========================================================
 
     if cloud_anomaly == 1:
 
@@ -232,200 +393,364 @@ def generate_playbook(case):
         )
 
         steps.append({
+
             "step": 7,
-            "action": "Review Cloud Activity",
-            "reason": (
-                "Cloud anomalies may indicate unauthorized "
-                "access or unusual account activity."
-            ),
+
+            "action":
+                "Review Cloud Activity",
+
+            "reason":
+                (
+                    "Cloud anomalies may indicate unauthorized "
+                    "access or unusual account activity."
+                ),
+
             "evidence_required": [
+
                 "Cloud login history",
+
                 "API activity",
+
                 "Permission changes",
+
                 "Resource access"
             ]
         })
 
         recommendations.append({
-            "action": "Investigate cloud account activity",
-            "priority": "HIGH",
-            "reason": "Rule triggered: cloud_anomaly == 1",
-            "evidence": "cloud_anomaly = 1"
+
+            "action":
+                "Investigate cloud account activity",
+
+            "priority":
+                "HIGH",
+
+            "reason":
+                "Rule triggered: cloud_anomaly == 1",
+
+            "evidence":
+                "cloud_anomaly = 1"
         })
 
-    # --------------------------------------------------------
-    # STEP 8 - Evidence Collection
-    # --------------------------------------------------------
+    # ========================================================
+    # STEP 8 - EVIDENCE COLLECTION
+    # ========================================================
 
     steps.append({
+
         "step": 8,
-        "action": "Collect Evidence",
-        "reason": (
-            "Investigation decisions must be supported "
-            "by recorded evidence."
-        ),
+
+        "action":
+            "Collect Evidence",
+
+        "reason":
+            (
+                "Investigation decisions must be supported "
+                "by recorded evidence."
+            ),
+
         "evidence_required": [
+
             "Relevant logs",
+
             "Alert details",
+
             "Screenshots or event references",
+
             "Analyst notes"
         ]
     })
 
-    # --------------------------------------------------------
-    # FAILURE STATE 1 - Missing Evidence
-    # --------------------------------------------------------
+    # ========================================================
+    # FAILURE STATE 1 - MISSING EVIDENCE
+    # ========================================================
 
     if evidence_missing == 1:
 
         steps.append({
+
             "step": 9,
-            "action": "STOP - Missing Evidence",
-            "reason": (
-                "Required evidence is unavailable. "
-                "Do not make a final containment decision."
-            ),
+
+            "action":
+                "STOP - Missing Evidence",
+
+            "reason":
+                (
+                    "Required evidence is unavailable. "
+                    "Do not make a final containment decision."
+                ),
+
             "evidence_required": [
+
                 "Missing log source",
+
                 "Missing event details",
+
                 "Missing analyst evidence"
             ]
         })
 
         recommendations.append({
-            "action": "Request missing evidence",
-            "priority": "BLOCKED",
-            "reason": "Rule triggered: evidence_missing == 1",
-            "evidence": "Required evidence is unavailable",
-            "human_confirmation_required": True
+
+            "action":
+                "Request missing evidence",
+
+            "priority":
+                "BLOCKED",
+
+            "reason":
+                "Rule triggered: evidence_missing == 1",
+
+            "evidence":
+                "Required evidence is unavailable",
+
+            "human_confirmation_required":
+                True
         })
 
-    # --------------------------------------------------------
-    # FAILURE STATE 2 - Conflicting Evidence
-    # --------------------------------------------------------
+    # ========================================================
+    # FAILURE STATE 2 - CONFLICTING EVIDENCE
+    # ========================================================
 
     if evidence_conflict == 1:
 
         steps.append({
+
             "step": 10,
-            "action": "STOP - Conflicting Evidence",
-            "reason": (
-                "Evidence sources disagree. "
-                "Escalate for manual review."
-            ),
+
+            "action":
+                "STOP - Conflicting Evidence",
+
+            "reason":
+                (
+                    "Evidence sources disagree. "
+                    "Escalate for manual review."
+                ),
+
             "evidence_required": [
+
                 "Conflicting log entries",
+
                 "Timeline comparison",
+
                 "Analyst explanation"
             ]
         })
 
         recommendations.append({
-            "action": "Escalate conflicting evidence for manual review",
-            "priority": "BLOCKED",
-            "reason": "Rule triggered: evidence_conflict == 1",
-            "evidence": "Evidence sources contain conflicting information",
-            "human_confirmation_required": True
+
+            "action":
+                "Escalate conflicting evidence for manual review",
+
+            "priority":
+                "BLOCKED",
+
+            "reason":
+                "Rule triggered: evidence_conflict == 1",
+
+            "evidence":
+                "Evidence sources contain conflicting information",
+
+            "human_confirmation_required":
+                True
         })
 
-    # --------------------------------------------------------
-    # STEP 9 - Risk Assessment
-    # --------------------------------------------------------
+    # ========================================================
+    # STEP 9 - RISK ASSESSMENT
+    # ========================================================
 
     steps.append({
+
         "step": 11,
-        "action": "Assess Risk",
-        "reason": (
-            "Risk level is determined from the available "
-            "security indicators and evidence."
-        ),
+
+        "action":
+            "Assess Risk",
+
+        "reason":
+            (
+                "Risk level is determined from the available "
+                "security indicators and evidence."
+            ),
+
         "evidence_required": [
+
             "Risk score",
+
             "Security indicators",
+
             "Investigation findings"
         ]
     })
 
-    # --------------------------------------------------------
+    # ========================================================
     # CONTAINMENT RECOMMENDATION
+    # ========================================================
+
+    # --------------------------------------------------------
+    # FAILURE STATES ALWAYS HAVE PRIORITY
     # --------------------------------------------------------
 
-    if evidence_missing == 1 or evidence_conflict == 1:
+    if (
+        evidence_missing == 1
+        or evidence_conflict == 1
+    ):
 
         containment = {
-            "action": "DO NOT CONTAIN YET",
-            "reason": (
-                "Containment is blocked until evidence "
-                "is complete and consistent."
-            ),
-            "human_confirmation_required": True
+
+            "action":
+                "DO NOT CONTAIN YET",
+
+            "reason":
+                (
+                    "Containment is blocked until evidence "
+                    "is complete and consistent."
+                ),
+
+            "human_confirmation_required":
+                True,
+
+            "human_confirmation":
+                True
         }
+
+    # --------------------------------------------------------
+    # HIGH RISK
+    # --------------------------------------------------------
 
     elif risk_level == "HIGH":
 
         containment = {
-            "action": "Recommend Endpoint Isolation / Account Disablement",
-            "reason": (
-                "HIGH risk case with multiple correlated "
-                "security indicators."
-            ),
-            "human_confirmation_required": True
+
+            "action":
+                "Recommend Endpoint Isolation / Account Disablement",
+
+            "reason":
+                (
+                    "HIGH risk case with multiple correlated "
+                    "security indicators."
+                ),
+
+            "human_confirmation_required":
+                True,
+
+            "human_confirmation":
+                True
         }
 
         high_impact_actions.append(
             "Endpoint isolation or account disablement"
         )
 
+    # --------------------------------------------------------
+    # MEDIUM RISK
+    # --------------------------------------------------------
+
     elif risk_level == "MEDIUM":
 
         containment = {
-            "action": "Escalate for Senior Analyst Review",
-            "reason": (
-                "MEDIUM risk requires additional review "
-                "before containment."
-            ),
-            "human_confirmation_required": True
+
+            "action":
+                "Escalate for Senior Analyst Review",
+
+            "reason":
+                (
+                    "MEDIUM risk requires additional review "
+                    "before containment."
+                ),
+
+            "human_confirmation_required":
+                True,
+
+            "human_confirmation":
+                True
         }
+
+    # --------------------------------------------------------
+    # LOW RISK
+    # --------------------------------------------------------
 
     else:
 
         containment = {
-            "action": "Continue Monitoring",
-            "reason": (
-                "LOW risk indicators do not currently "
-                "justify containment."
-            ),
-            "human_confirmation_required": False
+
+            "action":
+                "Continue Monitoring",
+
+            "reason":
+                (
+                    "LOW risk indicators do not currently "
+                    "justify containment."
+                ),
+
+            "human_confirmation_required":
+                False,
+
+            "human_confirmation":
+                False
         }
 
-    # --------------------------------------------------------
+    # ========================================================
     # FINAL STEP
-    # --------------------------------------------------------
+    # ========================================================
 
     steps.append({
+
         "step": 12,
-        "action": "Determine Containment",
-        "reason": containment["reason"],
+
+        "action":
+            "Determine Containment",
+
+        "reason":
+            containment["reason"],
+
         "evidence_required": [
+
             "Investigation findings",
+
             "Risk assessment",
+
             "Senior analyst approval where required"
         ]
     })
 
-    # --------------------------------------------------------
+    # ========================================================
     # RETURN PLAYBOOK
-    # --------------------------------------------------------
+    # ========================================================
 
     return {
-        "case_id": case["case_id"],
-        "risk_level": risk_level,
-        "risk_score": case["risk_score"],
-        "evidence": evidence,
-        "playbook_steps": steps,
-        "recommendations": recommendations,
-        "containment": containment,
-        "high_impact_actions": high_impact_actions
+
+        "case_id":
+            case["case_id"],
+
+        "risk_level":
+            risk_level,
+
+        "risk_score":
+            case["risk_score"],
+
+        "evidence":
+            evidence,
+
+        "playbook_steps":
+            steps,
+
+        "recommendations":
+            recommendations,
+
+        "approved_procedures":
+            approved_procedures,
+
+        "similar_investigations":
+            similar_investigations,
+
+        "past_investigation_insights":
+            past_investigation_insights,
+
+        "containment":
+            containment,
+
+        "high_impact_actions":
+            high_impact_actions
     }
 
 
@@ -436,54 +761,91 @@ def generate_playbook(case):
 if __name__ == "__main__":
 
     # Load cleaned dataset
-    file_path = "data/processed/clean_soc_cases.csv"
+    file_path = (
+        "data/processed/clean_soc_cases.csv"
+    )
 
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(
+        file_path
+    )
 
     # Select one case
     test_case = df.iloc[0]
 
     # Generate investigation playbook
-    result = generate_playbook(test_case)
+    result = generate_playbook(
+        test_case
+    )
 
-    print("\n" + "=" * 70)
-    print("SOC INVESTIGATION PLAYBOOK")
-    print("=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
 
-    print("\nCase ID:")
-    print(result["case_id"])
+    print(
+        "SOC INVESTIGATION PLAYBOOK"
+    )
 
-    print("\nRisk:")
+    print(
+        "=" * 70
+    )
+
+    print(
+        "\nCase ID:"
+    )
+
+    print(
+        result["case_id"]
+    )
+
+    print(
+        "\nRisk:"
+    )
+
     print(
         result["risk_level"],
         f"(Score: {result['risk_score']})"
     )
 
-    print("\nEvidence:")
-    for item in result["evidence"]:
-        print("  ✓", item)
+    print(
+        "\nEvidence:"
+    )
 
-    print("\nRecommendations:")
+    for item in result["evidence"]:
+
+        print(
+            "  ✓",
+            item
+        )
+
+    print(
+        "\nRecommendations:"
+    )
 
     for recommendation in result["recommendations"]:
 
         print(
-            f"\n  Action: {recommendation['action']}"
+            f"\n  Action: "
+            f"{recommendation['action']}"
         )
 
         print(
-            f"  Priority: {recommendation['priority']}"
+            f"  Priority: "
+            f"{recommendation['priority']}"
         )
 
         print(
-            f"  Reason: {recommendation['reason']}"
+            f"  Reason: "
+            f"{recommendation['reason']}"
         )
 
         print(
-            f"  Evidence: {recommendation['evidence']}"
+            f"  Evidence: "
+            f"{recommendation['evidence']}"
         )
 
-    print("\nContainment Decision:")
+    print(
+        "\nContainment Decision:"
+    )
 
     print(
         result["containment"]["action"]
@@ -496,13 +858,25 @@ if __name__ == "__main__":
 
     print(
         "Human confirmation required:",
-        result["containment"]["human_confirmation_required"]
+        result["containment"][
+            "human_confirmation_required"
+        ]
     )
 
-    print("\nInvestigation Steps:")
+    print(
+        "Human confirmation:",
+        result["containment"][
+            "human_confirmation"
+        ]
+    )
+
+    print(
+        "\nInvestigation Steps:"
+    )
 
     for step in result["playbook_steps"]:
 
         print(
-            f"{step['step']}. {step['action']}"
+            f"{step['step']}. "
+            f"{step['action']}"
         )
